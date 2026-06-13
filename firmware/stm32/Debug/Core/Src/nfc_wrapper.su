@@ -1,0 +1,5 @@
+../Core/Src/nfc_wrapper.c:11:10:NDEF_Wrapper_ReadData	32	static
+../Core/Src/nfc_wrapper.c:20:10:NDEF_Wrapper_WriteData	32	dynamic
+../Core/Src/nfc_wrapper.c:31:10:NfcTag_SelectProtocol	0	static
+../Core/Src/nfc_wrapper.c:35:10:NfcTag_WriteNDEF	0	static
+../Core/Src/nfc_wrapper.c:39:10:NfcTag_ReadNDEF	32	static

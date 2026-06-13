@@ -1,0 +1,3 @@
+../Core/Src/ui/ui_nfc_ack.c:62:9:UI_NFCAck_NeedsRedraw	2
+../Core/Src/ui/ui_nfc_ack.c:71:6:UI_NFCAck_SetIgnore	1
+../Core/Src/ui/ui_nfc_ack.c:75:6:UI_NFCAck_Update	10

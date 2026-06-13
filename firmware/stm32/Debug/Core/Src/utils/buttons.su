@@ -1,0 +1,2 @@
+../Core/Src/utils/buttons.c:12:6:Buttons_Init	0	static
+../Core/Src/utils/buttons.c:16:15:Buttons_Update	16	static

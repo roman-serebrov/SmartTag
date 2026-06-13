@@ -1,0 +1,3 @@
+../Middlewares/ST/lib_nfc/lib_NDEF/Template/lib_NDEF_config.c:31:9:NDEF_Wrapper_ReadData	0	static
+../Middlewares/ST/lib_nfc/lib_NDEF/Template/lib_NDEF_config.c:46:9:NDEF_Wrapper_WriteData	0	static
+../Middlewares/ST/lib_nfc/lib_NDEF/Template/lib_NDEF_config.c:59:10:NDEF_Wrapper_GetMemorySize	0	static

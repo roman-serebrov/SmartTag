@@ -1,0 +1,6 @@
+../Core/Src/screensaver/screensaver.c:25:13:draw_slide	5
+../Core/Src/screensaver/screensaver.c:47:6:Screensaver_Update	7
+../Core/Src/screensaver/screensaver.c:71:6:Screensaver_Exit	1
+../Core/Src/screensaver/screensaver.c:76:9:Screensaver_IsActive	1
+../Core/Src/screensaver/screensaver.c:81:6:Screensaver_NextSlide	4
+../Core/Src/screensaver/screensaver.c:91:6:Screensaver_PrevSlide	5

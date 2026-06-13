@@ -1,0 +1,6 @@
+../Core/Src/screensaver/screensaver.c:25:13:draw_slide	1160	static
+../Core/Src/screensaver/screensaver.c:47:6:Screensaver_Update	8	static
+../Core/Src/screensaver/screensaver.c:71:6:Screensaver_Exit	8	static
+../Core/Src/screensaver/screensaver.c:76:9:Screensaver_IsActive	0	static
+../Core/Src/screensaver/screensaver.c:81:6:Screensaver_NextSlide	8	static
+../Core/Src/screensaver/screensaver.c:91:6:Screensaver_PrevSlide	8	static

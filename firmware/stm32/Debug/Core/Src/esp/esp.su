@@ -1,0 +1,2 @@
+../Core/Src/esp/esp.c:17:6:ESP_Init	0	static
+../Core/Src/esp/esp.c:21:6:ESP_Update	344	static

@@ -1,0 +1,2 @@
+../Core/Src/ui/ui_spinner.c:11:6:draw_spinner_frame	32	static
+../Core/Src/ui/ui_spinner.c:30:6:clear_spinner	32	static

@@ -1,0 +1,6 @@
+../Core/Src/nfc/nfc.c:54:13:NFC_WriteBlock	3
+../Core/Src/nfc/nfc.c:97:13:NFC_WriteWiFi	2
+../Core/Src/nfc/nfc.c:22:10:NFC_GetScanCount	1
+../Core/Src/nfc/nfc.c:26:10:NFC_GetProfileCount	2
+../Core/Src/nfc/nfc.c:67:6:NFC_WriteURL_Public	5
+../Core/Src/nfc/nfc.c:150:6:NFC_WriteProfile	5

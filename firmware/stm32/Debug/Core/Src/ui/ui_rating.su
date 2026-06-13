@@ -1,0 +1,6 @@
+../Core/Src/ui/ui_rating.c:58:13:draw_stars	40	static
+../Core/Src/ui/ui_rating.c:72:6:UI_Rating_Show	24	static
+../Core/Src/ui/ui_rating.c:89:9:UI_Rating_Update	16	static
+../Core/Src/ui/ui_rating.c:115:9:UI_Rating_IsDone	0	static
+../Core/Src/ui/ui_rating.c:116:9:UI_Rating_GetScore	0	static
+../Core/Src/ui/ui_rating.c:117:9:UI_Rating_Reset	0	static

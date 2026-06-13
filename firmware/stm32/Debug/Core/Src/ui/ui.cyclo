@@ -1,0 +1,4 @@
+../Core/Src/ui/ui.c:35:6:draw_arrows	3
+../Core/Src/ui/ui.c:44:6:draw_dots	3
+../Core/Src/ui/ui.c:14:6:draw_labels	2
+../Core/Src/ui/ui.c:27:6:UI_DrawFull	1

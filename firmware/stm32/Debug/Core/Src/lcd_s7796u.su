@@ -1,0 +1,14 @@
+../Core/Src/lcd_s7796u.c:19:13:lcd_data8	16	static
+../Core/Src/lcd_s7796u.c:26:13:lcd_data16	16	static
+../Core/Src/lcd_s7796u.c:12:13:lcd_cmd	16	static
+../Core/Src/lcd_s7796u.c:152:6:LCD_FillRect.part.0	24	static
+../Core/Src/lcd_s7796u.c:50:6:LCD_Init	8	static
+../Core/Src/lcd_s7796u.c:146:6:LCD_DrawPixel	16	static
+../Core/Src/lcd_s7796u.c:152:6:LCD_FillRect	4	static
+../Core/Src/lcd_s7796u.c:175:6:LCD_FillScreen	16	static
+../Core/Src/lcd_s7796u.c:179:6:LCD_DrawLine	64	static
+../Core/Src/lcd_s7796u.c:195:6:LCD_DrawRect	32	static
+../Core/Src/lcd_s7796u.c:256:6:LCD_DrawString	88	static
+../Core/Src/lcd_s7796u.c:283:6:LCD_DrawFrameBuffer	32	static
+../Core/Src/lcd_s7796u.c:299:6:LCD_DisplayOn	0	static
+../Core/Src/lcd_s7796u.c:303:6:LCD_DisplayOff	0	static

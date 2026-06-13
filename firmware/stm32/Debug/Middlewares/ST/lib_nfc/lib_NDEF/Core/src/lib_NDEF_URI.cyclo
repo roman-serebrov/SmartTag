@@ -1,0 +1,6 @@
+../Middlewares/ST/lib_nfc/lib_NDEF/Core/src/lib_NDEF_URI.c:52:13:NDEF_Parse_WellKnowType	36
+../Middlewares/ST/lib_nfc/lib_NDEF/Core/src/lib_NDEF_URI.c:477:6:getUriType.part.0	45
+../Middlewares/ST/lib_nfc/lib_NDEF/Core/src/lib_NDEF_URI.c:273:10:NDEF_ReadURI	7
+../Middlewares/ST/lib_nfc/lib_NDEF/Core/src/lib_NDEF_URI.c:322:6:NDEF_PrepareURIMessage	14
+../Middlewares/ST/lib_nfc/lib_NDEF/Core/src/lib_NDEF_URI.c:466:10:NDEF_WriteURI	1
+../Middlewares/ST/lib_nfc/lib_NDEF/Core/src/lib_NDEF_URI.c:477:6:getUriType	3

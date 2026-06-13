@@ -1,0 +1,10 @@
+../Middlewares/ST/lib_nfc/lib_NDEF/Core/src/lib_NDEF.c:166:17:NDEF_ParseRecordHeader	56	static
+../Middlewares/ST/lib_nfc/lib_NDEF/Core/src/lib_NDEF.c:368:10:NDEF_IdentifyNDEF	40	static
+../Middlewares/ST/lib_nfc/lib_NDEF/Core/src/lib_NDEF.c:457:10:NDEF_ReadNDEF	0	static
+../Middlewares/ST/lib_nfc/lib_NDEF/Core/src/lib_NDEF.c:474:10:NDEF_getNDEFSize	0	static
+../Middlewares/ST/lib_nfc/lib_NDEF/Core/src/lib_NDEF.c:488:10:NDEF_WriteNDEF	0	static
+../Middlewares/ST/lib_nfc/lib_NDEF/Core/src/lib_NDEF.c:552:10:NDEF_IdentifyBuffer	32	static
+../Middlewares/ST/lib_nfc/lib_NDEF/Core/src/lib_NDEF.c:628:10:NDEF_WriteRecord	16	static
+../Middlewares/ST/lib_nfc/lib_NDEF/Core/src/lib_NDEF.c:504:10:NDEF_AppendRecord	584	static
+../Middlewares/ST/lib_nfc/lib_NDEF/Core/src/lib_NDEF.c:697:10:NDEF_GetRecordLength	0	static
+../Middlewares/ST/lib_nfc/lib_NDEF/Core/src/lib_NDEF.c:721:10:NDEF_ClearNDEF	0	static

@@ -1,0 +1,9 @@
+../Middlewares/ST/lib_nfc/lib_NDEF/Core/src/tagtype5_wrapper.c:233:10:NfcType5_WriteCCFile	3
+../Middlewares/ST/lib_nfc/lib_NDEF/Core/src/tagtype5_wrapper.c:260:10:NfcType5_ReadCCFile	3
+../Middlewares/ST/lib_nfc/lib_NDEF/Core/src/tagtype5_wrapper.c:287:10:NfcType5_TT5Init	6
+../Middlewares/ST/lib_nfc/lib_NDEF/Core/src/tagtype5_wrapper.c:343:10:NfcType5_NDEFDetection	14
+../Middlewares/ST/lib_nfc/lib_NDEF/Core/src/tagtype5_wrapper.c:76:10:NfcType5_ReadNDEF	7
+../Middlewares/ST/lib_nfc/lib_NDEF/Core/src/tagtype5_wrapper.c:142:10:NfcType5_WriteData	6
+../Middlewares/ST/lib_nfc/lib_NDEF/Core/src/tagtype5_wrapper.c:207:10:NfcType5_WriteNDEF	1
+../Middlewares/ST/lib_nfc/lib_NDEF/Core/src/tagtype5_wrapper.c:221:10:NfcTag_WriteProprietary	1
+../Middlewares/ST/lib_nfc/lib_NDEF/Core/src/tagtype5_wrapper.c:454:10:NfcType5_GetLength	4

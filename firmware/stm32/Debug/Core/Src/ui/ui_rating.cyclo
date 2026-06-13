@@ -1,0 +1,6 @@
+../Core/Src/ui/ui_rating.c:58:13:draw_stars	4
+../Core/Src/ui/ui_rating.c:72:6:UI_Rating_Show	1
+../Core/Src/ui/ui_rating.c:89:9:UI_Rating_Update	9
+../Core/Src/ui/ui_rating.c:115:9:UI_Rating_IsDone	1
+../Core/Src/ui/ui_rating.c:116:9:UI_Rating_GetScore	1
+../Core/Src/ui/ui_rating.c:117:9:UI_Rating_Reset	1
