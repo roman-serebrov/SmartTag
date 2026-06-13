@@ -1,0 +1,97 @@
+# ============================================
+# SmartTag Monorepo .gitignore
+# ============================================
+
+# ---------- OS ----------
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+*~
+
+# ---------- IDE (general) ----------
+.vscode/
+.idea/
+*.sublime-*
+
+# ============================================
+# FIRMWARE: STM32CubeIDE
+# ============================================
+firmware/stm32/Debug/
+firmware/stm32/Release/
+firmware/stm32/.settings/
+firmware/stm32/*.launch
+firmware/stm32/*.pydevproject
+firmware/stm32/.metadata/
+firmware/stm32/build/
+
+# Object files & binaries
+*.o
+*.d
+*.elf
+*.hex
+*.bin
+*.map
+*.list
+*.lst
+
+# ============================================
+# FIRMWARE: ESP8266 / Arduino
+# ============================================
+firmware/esp8266/build/
+firmware/esp8266/.pio/
+
+# ============================================
+# WEB: Node.js / Express (backend)
+# ============================================
+node_modules/
+npm-debug.log*
+yarn-error.log*
+yarn-debug.log*
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+# Environment variables (NEVER commit secrets)
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+
+# ============================================
+# WEB: React (frontend)
+# ============================================
+web/frontend/build/
+web/frontend/dist/
+web/frontend/.cache/
+
+# ============================================
+# Python tools
+# ============================================
+__pycache__/
+*.py[cod]
+*.egg-info/
+venv/
+.venv/
+*.egg
+
+# ============================================
+# Assets (keep originals, ignore generated)
+# ============================================
+# Uncomment if RGB565 binaries get too large:
+# assets/icons/generated/*.bin
+
+# ============================================
+# Misc
+# ============================================
+*.bak
+*.tmp
+*.temp
