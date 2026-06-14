@@ -2,8 +2,9 @@
 #include "nfc.h"
 
 SlideProfile_t slide_profiles[] = {
-    { "slide1.bin", "google.com",           0x04 },
-    { "slide2.bin", "yandex.ru",  0x04 },
+//    { "slide1.bin", "google.com", 0x04 },
+//    { "slide2.bin", "yandex.ru",  0x04 },
+	{"slide3.bin", "", 				0x04}
 };
 
 const uint8_t NUM_SLIDES = sizeof(slide_profiles) / sizeof(slide_profiles[0]);

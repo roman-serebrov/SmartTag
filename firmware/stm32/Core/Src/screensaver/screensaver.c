@@ -12,7 +12,6 @@
 #define SLIDE_INTERVAL_MS       5000
 #define SCREEN_W                320
 #define SCREEN_H                240
-#define MAX_SLIDES              2
 
 static uint8_t  s_active        = 0;
 static uint32_t s_last_activity = 0;
@@ -21,13 +20,14 @@ static uint8_t  s_slide_idx     = 0;
 
 static uint16_t s_line_buf[SCREEN_W];
 
-/* screensaver.c */
 static void draw_slide(uint8_t idx) {
+    if (idx >= NUM_SLIDES) return;
+
+    const char* fname = slide_profiles[idx].filename;
+
     FATFS fs;
     FIL   fil;
     UINT  br;
-    char  fname[] = "slide1.bin";
-    fname[5] = '0' + idx + 1;  /* меняем только цифру */
 
     if (f_mount(&fs, "", 1) != FR_OK) return;
     if (f_open(&fil, fname, FA_READ) != FR_OK) {
@@ -60,11 +60,9 @@ void Screensaver_Update(void) {
 
     if (now - s_last_slide >= SLIDE_INTERVAL_MS) {
         s_last_slide = now;
-        s_slide_idx  = (s_slide_idx + 1) % MAX_SLIDES;
+        s_slide_idx  = (s_slide_idx + 1) % NUM_SLIDES;
         draw_slide(s_slide_idx);
-        if (!g_esp_busy && s_slide_idx < NUM_SLIDES) {
-            Slide_WriteNFC(s_slide_idx);
-        }
+        if (!g_esp_busy) Slide_WriteNFC(s_slide_idx);
     }
 }
 
@@ -77,24 +75,18 @@ uint8_t Screensaver_IsActive(void) {
     return s_active;
 }
 
-
 void Screensaver_NextSlide(void) {
     if (!s_active) return;
-    s_slide_idx = (s_slide_idx + 1) % MAX_SLIDES;
+    s_slide_idx = (s_slide_idx + 1) % NUM_SLIDES;
     s_last_slide = HAL_GetTick();
     draw_slide(s_slide_idx);
-    if (!g_esp_busy && s_slide_idx < NUM_SLIDES) {
-        Slide_WriteNFC(s_slide_idx);
-    }
+    if (!g_esp_busy) Slide_WriteNFC(s_slide_idx);
 }
 
 void Screensaver_PrevSlide(void) {
     if (!s_active) return;
-    s_slide_idx = (s_slide_idx == 0) ? MAX_SLIDES - 1 : s_slide_idx - 1;
+    s_slide_idx = (s_slide_idx == 0) ? NUM_SLIDES - 1 : s_slide_idx - 1;
     s_last_slide = HAL_GetTick();
     draw_slide(s_slide_idx);
-    if (!g_esp_busy && s_slide_idx < NUM_SLIDES) {
-        Slide_WriteNFC(s_slide_idx);
-    }
+    if (!g_esp_busy) Slide_WriteNFC(s_slide_idx);
 }
-
