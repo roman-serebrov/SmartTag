@@ -1,22 +1,32 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import Layout from './components/Layout/layot';
+import { AuthProvider } from './context/AuthContext';
+import PrivateRoute from './components/PrivateRoute';
+import Layout from './components/Layout/Layout';
 import Dashboard from './pages/Dashboard';
 import Profiles from './pages/Profiles';
-import OTA from './pages/OTA';
+import OTA from './pages/Ota';
+import Devices from './pages/Devices';
 import Login from './pages/Login';
 
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/" element={<Layout />}>
-          <Route index element={<Dashboard />} />
-          <Route path="profiles" element={<Profiles />} />
-          <Route path="ota" element={<OTA />} />
-        </Route>
-        <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
+      <AuthProvider>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/" element={
+            <PrivateRoute>
+              <Layout />
+            </PrivateRoute>
+          }>
+            <Route index element={<Dashboard />} />
+            <Route path="profiles" element={<Profiles />} />
+            <Route path="ota" element={<OTA />} />
+            <Route path="devices" element={<Devices />} />
+          </Route>
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </AuthProvider>
     </BrowserRouter>
   );
 }

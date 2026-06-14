@@ -10,6 +10,7 @@ function Layout() {
           <NavLink to="/" end>Дашборд</NavLink>
           <NavLink to="/profiles">Профили</NavLink>
           <NavLink to="/ota">Обновление</NavLink>
+          <NavLink to="/devices">Устройства</NavLink>
         </nav>
       </aside>
       <main className="content">
