@@ -25,7 +25,9 @@ static uint8_t s_received_count = 0;
 static uint8_t s_new_profile_count = 0;
 
 uint8_t ESP_GetProfileCount(void) {
-    return s_new_profile_count > 0 ? s_new_profile_count : NUM_PROFILES;
+    /* До первого обновления возвращаем 0 — пустое устройство, без точек/стрелок.
+       После приёма с сервера — реальное число профилей. */
+    return s_new_profile_count;
 }
 
 static void ESP_Send(const char* str) {

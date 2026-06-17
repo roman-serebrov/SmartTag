@@ -71,7 +71,7 @@ static void handle_profile_switch(int8_t direction) {
     if (direction < 0 && selected > 0) {
         uint8_t old = selected--;
         draw_ui_animated(old, selected);
-    } else if (direction > 0 && selected < count - 1) {
+    } else if (direction > 0 && selected + 1 < count) {
         uint8_t old = selected++;
         draw_ui_animated(old, selected);
     } else {
@@ -141,8 +141,8 @@ void App_Update(void) {
 
                 Screensaver_Exit();
 
-                /* QR кнопка */
-                if (tx >= 250 && ty >= 190) {
+                /* QR кнопка — только если есть профили */
+                if (tx >= 250 && ty >= 190 && ESP_GetProfileCount() > 0) {
                     QR_Show(selected);
                     UI_DrawFull(selected);
                 }
@@ -159,7 +159,7 @@ void App_Update(void) {
                     }
                 }
                 /* Стрелка вправо */
-                else if (tx > 260 && ty > 40 && ty < 180 && selected < count - 1) {
+                else if (tx > 260 && ty > 40 && ty < 180 && selected + 1 < count) {
                     uint8_t old = selected++;
                     draw_ui_animated(old, selected);
                     if (profiles[selected].is_rating) {

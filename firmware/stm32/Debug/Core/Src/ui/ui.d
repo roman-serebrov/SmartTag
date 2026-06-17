@@ -45,7 +45,8 @@ Core/Src/ui/ui.o: ../Core/Src/ui/ui.c \
  ../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart_ex.h \
  ../Core/Inc/font_montserrat.h \
  /Users/romanagalarov/Projects/SmartTag/firmware/stm32/Core/Inc/utils/text.h \
- ../Core/Inc/main.h
+ ../Core/Inc/main.h \
+ /Users/romanagalarov/Projects/SmartTag/firmware/stm32/Core/Inc/esp/esp.h
 /Users/romanagalarov/Projects/SmartTag/firmware/stm32/Core/Inc/ui/ui.h:
 /Users/romanagalarov/Projects/SmartTag/firmware/stm32/Core/Inc/ui/ui_anim.h:
 /Users/romanagalarov/Projects/SmartTag/firmware/stm32/Core/Inc/app/profiles.h:
@@ -93,3 +94,4 @@ Core/Src/ui/ui.o: ../Core/Src/ui/ui.c \
 ../Core/Inc/font_montserrat.h:
 /Users/romanagalarov/Projects/SmartTag/firmware/stm32/Core/Inc/utils/text.h:
 ../Core/Inc/main.h:
+/Users/romanagalarov/Projects/SmartTag/firmware/stm32/Core/Inc/esp/esp.h:
