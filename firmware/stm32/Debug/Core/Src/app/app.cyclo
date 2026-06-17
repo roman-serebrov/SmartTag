@@ -1,2 +1,3 @@
-../Core/Src/app/app.c:23:6:App_Init	1
-../Core/Src/app/app.c:61:6:App_Update	28
+../Core/Src/app/app.c:68:13:handle_profile_switch	5
+../Core/Src/app/app.c:25:6:App_Init	1
+../Core/Src/app/app.c:90:6:App_Update	26

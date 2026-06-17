@@ -1,6 +1,6 @@
-../Core/Src/screensaver/screensaver.c:23:13:draw_slide	1152	static
-../Core/Src/screensaver/screensaver.c:47:6:Screensaver_Update	8	static
-../Core/Src/screensaver/screensaver.c:69:6:Screensaver_Exit	8	static
-../Core/Src/screensaver/screensaver.c:74:9:Screensaver_IsActive	0	static
-../Core/Src/screensaver/screensaver.c:78:6:Screensaver_NextSlide	8	static
-../Core/Src/screensaver/screensaver.c:86:6:Screensaver_PrevSlide	8	static
+../Core/Src/screensaver/screensaver.c:24:13:draw_slide	592	static
+../Core/Src/screensaver/screensaver.c:48:6:Screensaver_Update	8	static
+../Core/Src/screensaver/screensaver.c:70:6:Screensaver_Exit	8	static
+../Core/Src/screensaver/screensaver.c:75:9:Screensaver_IsActive	0	static
+../Core/Src/screensaver/screensaver.c:79:6:Screensaver_NextSlide	8	static
+../Core/Src/screensaver/screensaver.c:87:6:Screensaver_PrevSlide	8	static

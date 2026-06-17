@@ -40,7 +40,9 @@ Core/Src/esp/esp.o: ../Core/Src/esp/esp.c \
  ../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart.h \
  ../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart_ex.h \
  /Users/romanagalarov/Projects/SmartTag/firmware/stm32/Core/Inc/nfc/nfc.h \
- ../Core/Inc/lcd_s7796u.h ../Core/Inc/font_montserrat.h
+ ../Core/Inc/lcd_s7796u.h ../Core/Inc/font_montserrat.h \
+ /Users/romanagalarov/Projects/SmartTag/firmware/stm32/Core/Inc/app/profiles.h \
+ /Users/romanagalarov/Projects/SmartTag/firmware/stm32/Core/Inc/app/config.h
 /Users/romanagalarov/Projects/SmartTag/firmware/stm32/Core/Inc/esp/esp.h:
 ../Core/Inc/main.h:
 ../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal.h:
@@ -85,3 +87,5 @@ Core/Src/esp/esp.o: ../Core/Src/esp/esp.c \
 /Users/romanagalarov/Projects/SmartTag/firmware/stm32/Core/Inc/nfc/nfc.h:
 ../Core/Inc/lcd_s7796u.h:
 ../Core/Inc/font_montserrat.h:
+/Users/romanagalarov/Projects/SmartTag/firmware/stm32/Core/Inc/app/profiles.h:
+/Users/romanagalarov/Projects/SmartTag/firmware/stm32/Core/Inc/app/config.h:

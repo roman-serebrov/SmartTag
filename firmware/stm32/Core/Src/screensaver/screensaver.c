@@ -19,17 +19,18 @@ static uint32_t s_last_slide    = 0;
 static uint8_t  s_slide_idx     = 0;
 
 static uint16_t s_line_buf[SCREEN_W];
+static FATFS s_ss_fs;
 
 static void draw_slide(uint8_t idx) {
     if (idx >= NUM_SLIDES) return;
 
     const char* fname = slide_profiles[idx].filename;
 
-    FATFS fs;
+
     FIL   fil;
     UINT  br;
 
-    if (f_mount(&fs, "", 1) != FR_OK) return;
+    if (f_mount(&s_ss_fs, "", 1) != FR_OK) return;
     if (f_open(&fil, fname, FA_READ) != FR_OK) {
         f_mount(NULL, "", 0);
         return;

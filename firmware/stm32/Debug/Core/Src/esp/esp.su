@@ -1,2 +1,4 @@
-../Core/Src/esp/esp.c:17:6:ESP_Init	0	static
-../Core/Src/esp/esp.c:21:6:ESP_Update	344	static
+../Core/Src/esp/esp.c:36:17:ESP_ReadLine	40	static
+../Core/Src/esp/esp.c:27:9:ESP_GetProfileCount	0	static
+../Core/Src/esp/esp.c:102:6:ESP_Init	0	static
+../Core/Src/esp/esp.c:106:6:ESP_Update	560	static

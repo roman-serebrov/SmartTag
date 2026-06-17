@@ -61,7 +61,7 @@ void QR_Show(uint8_t sel) {
     } else if (profiles[sel].is_wifi) {
         snprintf(qr_text, sizeof(qr_text), "WIFI:T:WPA;S:%s;P:%s;;", WIFI_SSID, WIFI_PASSWORD);
     } else {
-        snprintf(qr_text, sizeof(qr_text), "https://%s", profiles[sel].url);
+    	snprintf(qr_text, sizeof(qr_text), "%s", profiles[sel].url);
     }
     draw_qr_screen();
 

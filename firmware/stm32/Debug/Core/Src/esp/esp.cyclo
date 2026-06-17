@@ -1,2 +1,4 @@
-../Core/Src/esp/esp.c:17:6:ESP_Init	1
-../Core/Src/esp/esp.c:21:6:ESP_Update	10
+../Core/Src/esp/esp.c:36:17:ESP_ReadLine	6
+../Core/Src/esp/esp.c:27:9:ESP_GetProfileCount	1
+../Core/Src/esp/esp.c:102:6:ESP_Init	1
+../Core/Src/esp/esp.c:106:6:ESP_Update	17
