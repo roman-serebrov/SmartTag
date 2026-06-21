@@ -2,6 +2,12 @@ import { useState, useEffect } from 'react';
 import api from '../api/client';
 import './Profiles.css';
 
+const ONLINE_WINDOW_MS = 2 * 60 * 1000;
+function isOnline(device) {
+  if (!device || !device.lastSeen) return false;
+  return Date.now() - new Date(device.lastSeen).getTime() < ONLINE_WINDOW_MS;
+}
+
 function Profiles() {
   const [devices, setDevices] = useState([]);
   const [selectedDevice, setSelectedDevice] = useState(null);
@@ -11,7 +17,6 @@ function Profiles() {
   const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editingProfile, setEditingProfile] = useState(null);
-  const [deviceIp, setDeviceIp] = useState('');
 
   const [form, setForm] = useState({
     title: '',
@@ -23,6 +28,8 @@ function Profiles() {
 
   useEffect(() => {
     fetchDevices();
+    const t = setInterval(refreshDevices, 30000); // тихо обновляем статус онлайн
+    return () => clearInterval(t);
   }, []);
 
   useEffect(() => {
@@ -40,6 +47,16 @@ function Profiles() {
       setError('Не удалось загрузить устройства');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Тихое обновление: освежает lastSeen/статус, НЕ трогая выбранное устройство
+  const refreshDevices = async () => {
+    try {
+      const res = await api.get('/devices');
+      setDevices(res.data.devices);
+    } catch {
+      /* молча — статус просто не обновится в этот раз */
     }
   };
 
@@ -96,16 +113,14 @@ function Profiles() {
   };
 
   const pushToDevice = async () => {
-    if (!deviceIp) {
-      setError('Введите IP устройства');
-      return;
-    }
     setPushing(true);
+    setError('');
     try {
-      await api.post(`/profiles/${selectedDevice}/push`, { deviceIp });
+      await api.post(`/profiles/${selectedDevice}/push`, {});
       alert('Профили отправлены на устройство!');
-    } catch {
-      setError('Не удалось подключиться к устройству');
+      refreshDevices();   // освежим статус сразу после отправки
+    } catch (err) {
+      setError(err.response?.data?.error || 'Не удалось подключиться к устройству');
     } finally {
       setPushing(false);
     }
@@ -230,21 +245,36 @@ function Profiles() {
       {profiles.length > 0 && (
         <div className="push-section">
           <h2>Отправить на устройство</h2>
-          <div className="push-row">
-            <input
-              type="text"
-              placeholder="IP устройства (например 192.168.1.100)"
-              value={deviceIp}
-              onChange={(e) => setDeviceIp(e.target.value)}
-            />
-            <button
-              className="btn-push"
-              onClick={pushToDevice}
-              disabled={pushing}
-            >
-              {pushing ? 'Отправка...' : '📡 Обновить устройство'}
-            </button>
-          </div>
+          {(() => {
+            const dev = devices.find(d => d.id === selectedDevice);
+            const online = isOnline(dev);
+            return (
+              <>
+                <div style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  marginBottom: 10, fontSize: 13,
+                  color: online ? '#22c55e' : '#f59e0b',
+                }}>
+                  <span style={{
+                    width: 8, height: 8, borderRadius: '50%',
+                    background: online ? '#22c55e' : '#f59e0b',
+                  }} />
+                  {online
+                    ? `Устройство в сети${dev?.localIp ? ` (${dev.localIp})` : ''}`
+                    : 'Устройство не в сети — отправка не дойдёт, пока оно не подключится'}
+                </div>
+                <div className="push-row">
+                  <button
+                    className="btn-push"
+                    onClick={pushToDevice}
+                    disabled={pushing || !online}
+                  >
+                    {pushing ? 'Отправка...' : '📡 Обновить устройство'}
+                  </button>
+                </div>
+              </>
+            );
+          })()}
         </div>
       )}
     </div>
