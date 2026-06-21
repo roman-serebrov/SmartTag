@@ -135,17 +135,46 @@ router.post('/:deviceId/push', async (req, res) => {
       orderBy: { position: 'asc' },
     });
 
-    // Отправляем на ESP8266
-    const deviceIp = req.body.deviceIp; // IP устройства передаёт клиент
-    if (!deviceIp) return res.status(400).json({ error: 'Не указан IP устройства' });
+    // IP устройства берём из базы (его прислал сам девайс в heartbeat).
+    // Ручной ввод оставлен как запасной вариант, но обычно не нужен.
+    const deviceIp = device.localIp || req.body.deviceIp;
+    if (!deviceIp) {
+      return res.status(409).json({
+        error: 'Устройство ещё не выходило в сеть — его IP неизвестен. Дождитесь, пока оно подключится (статус «Wi-Fi подключён»).',
+      });
+    }
 
-    const response = await fetch(`http://${deviceIp}/update`, {
+    const base = `http://${deviceIp}`;
+
+    // Убираем символы, ломающие парсер прошивки/STM32: кавычки, разделитель | и переводы строк
+    const clean = (s) => String(s ?? '').replace(/["|\r\n]/g, ' ').trim();
+
+    // Шлём профили ПО ОДНОМУ на /profile — формат, который прошивка превращает
+    // в команду P:idx:title|url|icon|isRating и STM32 рисует нормальную иконку.
+    for (let i = 0; i < profiles.length; i++) {
+      const p = profiles[i];
+      const payload = {
+        idx: i,
+        title: clean(p.title),
+        url: clean(p.url),
+        icon: clean(p.icon),
+        isRating: p.isRating ? 1 : 0,   // прошивка ждёт ЧИСЛО 1/0, не true/false
+      };
+      const r = await fetch(`${base}/profile`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!r.ok) throw new Error(`Профиль ${i} не принят устройством`);
+    }
+
+    // Финал: /done с количеством — STM32 понимает, что приём завершён (PD:count)
+    const done = await fetch(`${base}/done`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ profiles }),
+      body: JSON.stringify({ count: profiles.length }),
     });
-
-    if (!response.ok) throw new Error('Устройство не ответило');
+    if (!done.ok) throw new Error('Устройство не подтвердило приём');
 
     res.json({ message: 'Профили отправлены на устройство', count: profiles.length });
   } catch (err) {

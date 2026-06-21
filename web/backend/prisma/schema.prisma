@@ -18,10 +18,14 @@ model User {
 
 model Device {
   id        Int       @id @default(autoincrement())
+  hwId String? @unique
   userId    Int
   user      User      @relation(fields: [userId], references: [id])
   name      String    @default("SmartTag")
   token     String    @unique @default(uuid())
+  lastSeen  DateTime?
+  localIp   String?
+  pairingCode String? @unique
   createdAt DateTime  @default(now())
   profiles  Profile[]
 }

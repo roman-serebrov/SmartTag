@@ -7,6 +7,25 @@ const prisma = new PrismaClient();
 
 router.use(authMiddleware);
 
+/* Короткий код привязки устройства: 6 символов без похожих знаков (0/O, 1/I/L).
+   Пользователь вводит его на странице настройки SmartTag вместо длинного UUID. */
+function genPairingCode() {
+  const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  let s = '';
+  for (let i = 0; i < 6; i++) s += alphabet[Math.floor(Math.random() * alphabet.length)];
+  return s;
+}
+
+/* Сгенерировать код, гарантированно не занятый другим устройством */
+async function uniquePairingCode() {
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const code = genPairingCode();
+    const exists = await prisma.device.findUnique({ where: { pairingCode: code } });
+    if (!exists) return code;
+  }
+  throw new Error('could not generate unique pairing code');
+}
+
 // GET /api/devices — все устройства пользователя
 router.get('/', async (req, res) => {
   try {
@@ -35,10 +54,13 @@ router.post('/', [
   }
 
   try {
+    const pairingCode = await uniquePairingCode();
+
     const device = await prisma.device.create({
       data: {
         userId: req.userId,
         name: req.body.name,
+        pairingCode,
       },
     });
     res.status(201).json({ device });
