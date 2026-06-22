@@ -60,4 +60,36 @@ router.post('/heartbeat', async (req, res) => {
   }
 });
 
+// GET /api/devices/profiles?code=CODE
+// Устройство само тянет свои профили из базы (источник истины).
+// Возвращаем СРАЗУ в формате протокола STM32 — ESP просто пересылает тело в UART.
+router.get('/profiles', async (req, res) => {
+  try {
+    const code = String(req.query.code || '').trim().toUpperCase();
+    if (!code) return res.status(400).type('text/plain').send('');
+
+    const device = await prisma.device.findUnique({ where: { pairingCode: code } });
+    if (!device) return res.status(401).type('text/plain').send('');
+
+    const profiles = await prisma.profile.findMany({
+      where: { deviceId: device.id, active: true },
+      orderBy: { position: 'asc' },
+    });
+
+    // те же правила очистки, что и в push: убираем символы, ломающие парсер
+    const clean = (s) => String(s ?? '').replace(/["|\r\n]/g, ' ').trim();
+
+    let out = '';
+    profiles.forEach((p, i) => {
+      out += `P:${i}:${clean(p.title)}|${clean(p.url)}|${clean(p.icon)}|${p.isRating ? 1 : 0}\n`;
+    });
+    out += `PD:${profiles.length}\n`;
+
+    res.type('text/plain').send(out);
+  } catch (err) {
+    console.error('pull profiles error:', err);
+    res.status(500).type('text/plain').send('');
+  }
+});
+
 module.exports = router;

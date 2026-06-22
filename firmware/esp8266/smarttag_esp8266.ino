@@ -398,6 +398,55 @@ void sendHeartbeat() {
     Serial.println("Heartbeat " + url + " -> " + String(code));
 }
 
+/* ====================================================================
+ *  ПОДТЯГИВАНИЕ ПРОФИЛЕЙ ИЗ БАЗЫ (источник истины — сервер)
+ *  GET {SERVER_URL}/api/devices/profiles?code=КОД
+ *  Сервер отдаёт уже готовые строки протокола STM32:
+ *     P:idx:title|url|icon|isRating
+ *     ...
+ *     PD:count
+ *  ESP просто пересылает тело ответа в STM32 — парсить ничего не нужно.
+ * ==================================================================== */
+void pullProfiles() {
+    if (savedCode.length() == 0) return;
+    if (WiFi.status() != WL_CONNECTED) return;
+
+    String url = String(SERVER_URL) + "/api/devices/profiles?code=" + savedCode;
+
+    HTTPClient http;
+    http.setTimeout(5000);
+    int code = -1;
+    String body = "";
+
+    if (String(SERVER_URL).startsWith("https")) {
+        BearSSL::WiFiClientSecure sc;
+        sc.setInsecure();
+        if (http.begin(sc, url)) {
+            code = http.GET();
+            if (code == 200) body = http.getString();
+            http.end();
+        }
+    } else {
+        WiFiClient c;
+        if (http.begin(c, url)) {
+            code = http.GET();
+            if (code == 200) body = http.getString();
+            http.end();
+        }
+    }
+
+    Serial.println("Pull profiles -> " + String(code));
+
+    if (code == 200 && body.length() > 0) {
+        /* пересылаем готовые строки P:/PD: в STM32 как есть */
+        for (unsigned int i = 0; i < body.length(); i++) {
+            stm32.write(body[i]);
+            delay(2);
+        }
+        Serial.println("Profiles forwarded to STM32:\n" + body);
+    }
+}
+
 bool startStation() {
     WiFi.mode(WIFI_STA);
     WiFi.begin(savedSsid.c_str(), savedPass.c_str());
@@ -427,6 +476,7 @@ bool startStation() {
     Serial.println("Server OK (station mode)");
     mode = MODE_STA;
     sendHeartbeat();                  /* сразу сообщаем серверу, что мы онлайн */
+    pullProfiles();                   /* и подтягиваем актуальные профили из базы */
     return true;
 }
 
