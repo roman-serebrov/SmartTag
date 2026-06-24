@@ -7,6 +7,7 @@ import Profiles from './pages/Profiles';
 import OTA from './pages/Ota';
 import Devices from './pages/Devices';
 import Login from './pages/Login';
+import Slides from './pages/Slides';
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
             <Route path="profiles" element={<Profiles />} />
             <Route path="ota" element={<OTA />} />
             <Route path="devices" element={<Devices />} />
+            <Route path="slides" element={<Slides />} />
           </Route>
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>

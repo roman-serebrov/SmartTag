@@ -22,8 +22,8 @@ app.use(cookieParser());
 
 // Rate limiting на auth эндпоинты
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 минут
-  max: 10, // максимум 10 попыток
+  windowMs: 60 * 60 * 1000, // 15 минут
+  max: 100, // максимум 10 попыток
   message: { error: 'Слишком много запросов, попробуйте позже' },
 });
 
@@ -32,6 +32,7 @@ app.use('/api/auth', authLimiter, require('./routes/auth'));
 app.use('/api/profiles', require('./routes/profiles'));
 app.use('/api/devices', require('./routes/heartbeat')); 
 app.use('/api/devices', require('./routes/devices'));
+app.use('/api/slides', require('./routes/slides'));
 
 // Health check
 app.get('/api/health', (req, res) => {

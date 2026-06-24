@@ -95,3 +95,4 @@ venv/
 *.bak
 *.tmp
 *.temp
+web/backend/uploads/
