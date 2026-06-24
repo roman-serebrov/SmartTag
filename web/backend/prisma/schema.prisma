@@ -25,9 +25,12 @@ model Device {
   token     String    @unique @default(uuid())
   lastSeen  DateTime?
   localIp   String?
+  scanTotal Int     @default(0)
+  statsRaw  String?
   pairingCode String? @unique
   createdAt DateTime  @default(now())
   profiles  Profile[]
+  slides Slide[]
 }
 
 model Profile {
@@ -40,5 +43,18 @@ model Profile {
   position  Int      @default(0)
   isRating  Boolean  @default(false)
   active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  scanCount Int @default(0)
+}
+
+model Slide {
+  id        Int      @id @default(autoincrement())
+  deviceId  Int
+  device    Device   @relation(fields: [deviceId], references: [id])
+  name      String
+  binFile   String                       // имя .bin файла на диске сервера
+  sizeBytes Int      @default(0)
+  position  Int      @default(0)
+  ready     Boolean  @default(false)      // true = конвертация прошла, готов к отправке
   createdAt DateTime @default(now())
 }

@@ -49,6 +49,47 @@ router.post('/heartbeat', async (req, res) => {
       },
     });
 
+    // --- Аналитика сканов (Путь А) ---
+    // Устройство шлёт НАКОПИТЕЛЬНЫЕ счётчики с момента включения.
+    // Считаем дельту относительно прошлого снимка, чтобы пережить ребут
+    // устройства (после ребута его счётчик обнуляется -> дельта = текущее значение).
+    const { stats } = req.body || {};
+    if (stats && typeof stats === 'object') {
+      const prev = (() => { try { return JSON.parse(device.statsRaw || '{}'); } catch { return {}; } })();
+      const delta = (cur, prv) => {
+        cur = Number(cur) || 0; prv = Number(prv) || 0;
+        return cur >= prv ? cur - prv : cur;   // cur < prv => было выключение, счётчик сбросился
+      };
+
+      const dTotal = delta(stats.total, prev.total);
+      if (dTotal > 0) {
+        await prisma.device.update({
+          where: { id: device.id },
+          data: { scanTotal: { increment: dTotal } },
+        });
+      }
+
+      // по профилям: p0..p7 соответствуют профилям в порядке position
+      const profs = await prisma.profile.findMany({
+        where: { deviceId: device.id },
+        orderBy: { position: 'asc' },
+      });
+      for (let i = 0; i < profs.length && i < 8; i++) {
+        const d = delta(stats[`p${i}`], prev[`p${i}`]);
+        if (d > 0) {
+          await prisma.profile.update({
+            where: { id: profs[i].id },
+            data: { scanCount: { increment: d } },
+          });
+        }
+      }
+
+      await prisma.device.update({
+        where: { id: device.id },
+        data: { statsRaw: JSON.stringify(stats) },
+      });
+    }
+
     res.json({ status: 'ok' });
   } catch (err) {
     // P2002 — нарушение уникального индекса (на случай гонки)

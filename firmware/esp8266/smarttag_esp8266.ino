@@ -367,13 +367,30 @@ void handleCaptive() {
  *  POST {server}/api/devices/heartbeat  body: {"token":..., "localIp":...}
  *  Сервер находит девайс по токену, ставит lastSeen=now, localIp.
  * ==================================================================== */
+/* Запросить у STM32 статистику сканов (команда G) -> JSON-строка или "" */
+String getStmStats() {
+    while (stm32.available()) stm32.read();   /* чистим возможный мусор */
+    stm32.print("G");
+    delay(500);
+    String resp = "";
+    if (stm32.available()) {
+        resp = stm32.readStringUntil('\n');
+        resp.trim();
+    }
+    return resp.startsWith("{") ? resp : "";
+}
+
 void sendHeartbeat() {
     if (savedCode.length() == 0) return;
     if (WiFi.status() != WL_CONNECTED) return;
 
+    String stats = getStmStats();   /* {"total":..,"p0":..,...} или "" */
+
     String url  = String(SERVER_URL) + "/api/devices/heartbeat";
     String body = "{\"code\":\"" + savedCode + "\",\"hwId\":\"" + WiFi.macAddress() +
-                  "\",\"localIp\":\"" + WiFi.localIP().toString() + "\"}";
+                  "\",\"localIp\":\"" + WiFi.localIP().toString() + "\"";
+    if (stats.length() > 0) body += ",\"stats\":" + stats;
+    body += "}";
 
     HTTPClient http;
     http.setTimeout(3000);            /* не блокировать loop надолго, если сервер недоступен */
