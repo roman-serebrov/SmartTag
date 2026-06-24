@@ -96,3 +96,5 @@ venv/
 *.tmp
 *.temp
 web/backend/uploads/
+web/backend/uploads/
+web/backend/src/assets/
