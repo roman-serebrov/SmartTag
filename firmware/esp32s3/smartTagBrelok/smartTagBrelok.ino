@@ -1081,9 +1081,12 @@ static size_t utf8Bounds(const char* text, size_t maxBytes, uint16_t* ends, size
 // Максимальное число символов, при котором fits(prefix+"...") истинно.
 // fits монотонна по числу символов -> бинарный поиск корректен.
 // Возвращает длину префикса в байтах (0 = не влезает ничего).
-typedef bool (*fits_fn)(const char* buf, lv_coord_t limit);
+// Тип колбэка — «сырым» указателем в сигнатуре, БЕЗ typedef: препроцессор
+// Arduino вставляет автопрототипы функций в начало файла, где typedef ещё
+// не объявлен — с typedef компиляция падала («fits_fn has not been declared»).
 static size_t truncBinSearch(const char* text, const uint16_t* ends, size_t nChars,
-                             char* buf, fits_fn fits, lv_coord_t limit) {
+                             char* buf, bool (*fits)(const char*, lv_coord_t),
+                             lv_coord_t limit) {
   size_t lo = 0, hi = nChars;          // lo — заведомо влезает, hi+1 — нет
   while (lo < hi) {
     size_t mid = (lo + hi + 1) / 2;    // пробуем mid символов
