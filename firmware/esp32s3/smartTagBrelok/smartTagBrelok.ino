@@ -2206,13 +2206,17 @@ void setup() {
   //  трогает. Иконки/шрифты — const → уже во FLASH.
   //  LVGL_BUF_PSRAM 0 = буферы в internal DMA (быстро, дисплей точно ок).
   //
-  //  ДВА буфера — ОБЯЗАТЕЛЬНО, урок зависания на ленте уведомлений:
-  //  шина QSPI (esp_lcd) ставит передачу в DMA-очередь и может вернуть
-  //  управление ДО её завершения. С одним буфером LVGL начинал перезаписывать
-  //  буфер, пока DMA ещё читал из него — на самой тяжёлой перерисовке
-  //  (лента, 20 карточек, полный экран) дисплей замирал намертво, выглядело
-  //  как «тач не реагирует». buf2 не ускоряет рендер, но СТРАХУЕТ
-  //  асинхронную передачу: LVGL рисует в один буфер, пока DMA гонит другой.
+  //  ОДИН буфер — ВЫВЕРЕНО ЭМПИРИЧЕСКИ (история двух ошибок):
+  //  1) Гипотеза «buf2 страхует DMA-очередь QSPI» не подтвердилась: сборка
+  //     с возвращённым buf2 висла на ленте так же — виноват был пул LVGL
+  //     (48КБ, исчерпание -> LV_ASSERT -> while(1)), а не буферы. С одним
+  //     буфером рендер работает корректно.
+  //  2) Два буфера + OPI PSRAM НЕСОВМЕСТИМЫ с BLE: включение PSRAM съедает
+  //     ~32КБ internal под кэш, и 217КБ буферов не оставляли BLE-контроллеру
+  //     его ~70КБ ТОЛЬКО-internal памяти -> «BLE_INIT: Malloc failed» +
+  //     assert emi.c 164 + IWDT-перезагрузка на старте.
+  //  Итого: buf1 108КБ internal DMA, пул LVGL в PSRAM (lv_conf.h:
+  //  LV_MEM_CUSTOM 1 + ps_malloc), BLE получает свою internal-память.
   // ============================================================
   #define LVGL_BUF_DIVISOR 4
   #define LVGL_BUF_PSRAM   0
@@ -2223,7 +2227,7 @@ void setup() {
   uint32_t buf_caps = MALLOC_CAP_DMA;
 #endif
   lv_color_t *buf1 = (lv_color_t *)heap_caps_malloc(buf_px * sizeof(lv_color_t), buf_caps);
-  lv_color_t *buf2 = (lv_color_t *)heap_caps_malloc(buf_px * sizeof(lv_color_t), buf_caps);
+  lv_color_t *buf2 = NULL;
 
   String LVGL_Arduino = "Hello Arduino! ";
   LVGL_Arduino += String('V') + lv_version_major() + "." + lv_version_minor() + "." + lv_version_patch();
