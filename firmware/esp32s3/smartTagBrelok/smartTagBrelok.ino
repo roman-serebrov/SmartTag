@@ -2206,12 +2206,13 @@ void setup() {
   //  трогает. Иконки/шрифты — const → уже во FLASH.
   //  LVGL_BUF_PSRAM 0 = буферы в internal DMA (быстро, дисплей точно ок).
   //
-  //  ОДИН буфер вместо двух: my_disp_flush БЛОКИРУЮЩИЙ (draw16bitRGBBitmap
-  //  возвращается когда данные ушли, flush_ready зовётся сразу) — LVGL
-  //  никогда не рендерил в buf2 параллельно с передачей buf1, второй буфер
-  //  просто съедал ~108КБ самой дефицитной internal DMA RAM без выигрыша.
-  //  Если когда-нибудь сделаем асинхронный DMA-flush (flush_ready из
-  //  колбэка завершения) — тогда buf2 вернуть, он начнёт работать.
+  //  ДВА буфера — ОБЯЗАТЕЛЬНО, урок зависания на ленте уведомлений:
+  //  шина QSPI (esp_lcd) ставит передачу в DMA-очередь и может вернуть
+  //  управление ДО её завершения. С одним буфером LVGL начинал перезаписывать
+  //  буфер, пока DMA ещё читал из него — на самой тяжёлой перерисовке
+  //  (лента, 20 карточек, полный экран) дисплей замирал намертво, выглядело
+  //  как «тач не реагирует». buf2 не ускоряет рендер, но СТРАХУЕТ
+  //  асинхронную передачу: LVGL рисует в один буфер, пока DMA гонит другой.
   // ============================================================
   #define LVGL_BUF_DIVISOR 4
   #define LVGL_BUF_PSRAM   0
@@ -2222,7 +2223,7 @@ void setup() {
   uint32_t buf_caps = MALLOC_CAP_DMA;
 #endif
   lv_color_t *buf1 = (lv_color_t *)heap_caps_malloc(buf_px * sizeof(lv_color_t), buf_caps);
-  lv_color_t *buf2 = NULL;
+  lv_color_t *buf2 = (lv_color_t *)heap_caps_malloc(buf_px * sizeof(lv_color_t), buf_caps);
 
   String LVGL_Arduino = "Hello Arduino! ";
   LVGL_Arduino += String('V') + lv_version_major() + "." + lv_version_minor() + "." + lv_version_patch();
