@@ -174,16 +174,57 @@ static void screenWake() {
 #define ST25DV_DATA_ADDR 0x53
 #define ST25DV_SYS_ADDR  0x57
 #define URI_PREFIX_HTTPS 0x04
+#define URI_PREFIX_TEL   0x05   // NDEF-код "tel:" — тап телефоном = звонок
+#define NFC_PREFIX_NONE  0xFF   // слайд не переписывает NFC (см. nfcWriteProfile)
+
+// Телефон владельца: безопасный дефолт для NFC на слайдах с NFC_PREFIX_NONE
+// (оставлять на теге ссылку ПРЕДЫДУЩЕГО слайда нельзя — тап открыл бы чужой
+// контент; звонок владельцу уместен с любого слайда).
+#define OWNER_PHONE "+79602519620"
+
+// Вид содержимого QR-кода слайда
+enum {
+  QR_HTTPS = 0,   // QR = "https://" + url (как было всегда)
+  QR_RAW,         // QR = url как есть (vCard-визитка)
+  QR_TEL,         // QR = "tel:" + url (скан = предложение позвонить)
+};
 
 typedef struct {
   const char* name;
-  const char* url;
-  const lv_img_dsc_t* img;
+  const char* url;          // содержимое (смысл зависит от qr_kind)
+  const lv_img_dsc_t* img;  // иконка 160×160 или NULL (тогда рисуем круг с symbol)
+  uint8_t qr_kind;          // QR_HTTPS / QR_RAW / QR_TEL
+  uint8_t nfc_prefix;       // 0x04 https / 0x05 tel: / NFC_PREFIX_NONE
+  const char* symbol;       // LV_SYMBOL_* для слайдов без картинки (img==NULL)
+  const char* nfc_url;      // содержимое NFC, если отличается от url (NULL = url).
+                            // Нужен vCard-слайду: QR несёт визитку, а NFC — tel:
+                            // (NDEF MIME vCard — отдельная задача, сейчас не делаем)
 } Profile_t;
 
+// vCard как одна строка: \n внутри строки — валидный разделитель vCard 3.0.
+// ~160 байт — lv_qrcode на 244px кодирует без проблем (QR версии ~7-8,
+// ~5px на модуль — камеры читают уверенно). Если на практике скан будет
+// капризничать — первым кандидатом на удаление строка URL:...
+static const char VCARD_ROMAN[] =
+  "BEGIN:VCARD\nVERSION:3.0\nN:Serebrov;Roman;;;\nFN:Roman Serebrov\n"
+  "TEL;TYPE=CELL:" OWNER_PHONE "\nEMAIL:romasserebrov26@gmail.com\n"
+  "URL:https://t.me/roman_serebrov\nEND:VCARD";
+
 Profile_t profiles[] = {
-  { "Instagram", "instagram.com/nfcsmarttag", &inst_logo },
-  { "Telegram",  "t.me/roman_serebrov",        &telega_logo },
+  // name, url, img, qr_kind, nfc_prefix, symbol, nfc_url
+  { "Instagram",   "instagram.com/nfcsmarttag", &inst_logo,   QR_HTTPS, URI_PREFIX_HTTPS, NULL,              NULL },
+  { "Telegram",    "t.me/roman_serebrov",       &telega_logo, QR_HTTPS, URI_PREFIX_HTTPS, NULL,              NULL },
+  // Контакт: QR = vCard (скан = «создать контакт»), NFC = tel: (звонок)
+  { "Контакт",     VCARD_ROMAN,                 NULL,         QR_RAW,   URI_PREFIX_TEL,   LV_SYMBOL_CALL,    OWNER_PHONE },
+  // Оплата: перевод по номеру телефона. Символ CHARGE (молния) — устойчивый
+  // образ «быстрого платежа» (СБП); DOWNLOAD читался бы как «скачивание».
+  { "Оплата",      "www.sberbank.com/sms/pbpn?requisiteNumber=79602519620",
+                                                NULL,         QR_HTTPS, URI_PREFIX_HTTPS, LV_SYMBOL_CHARGE,  NULL },
+  // Потеряшка: нашедший сканирует/тапает — телефон предлагает позвонить
+  { "Нашли меня?", OWNER_PHONE,                 NULL,         QR_TEL,   URI_PREFIX_TEL,   LV_SYMBOL_GPS,     NULL },
+  // Заглушки маркетплейсов (SHUFFLE временно, заменим на фирменные иконки)
+  { "Ozon",        "www.ozon.ru",               NULL,         QR_HTTPS, URI_PREFIX_HTTPS, LV_SYMBOL_SHUFFLE, NULL },
+  { "Маркет",      "market.yandex.ru",          NULL,         QR_HTTPS, URI_PREFIX_HTTPS, LV_SYMBOL_SHUFFLE, NULL },
 };
 const uint8_t NUM_PROFILES = sizeof(profiles) / sizeof(profiles[0]);
 uint8_t current = 0;
@@ -707,7 +748,26 @@ void NFC_WriteURL(const char* url, uint8_t prefix) {
     NFC_WriteBlock(0x0004 + offset, &full[offset], chunk);
     offset += chunk; remaining -= chunk; delay(5);
   }
-  Serial.print("NFC -> https://"); Serial.println(url);
+  Serial.printf("NFC -> %s%s\n",
+                prefix == URI_PREFIX_TEL ? "tel:" :
+                prefix == URI_PREFIX_HTTPS ? "https://" : "", url);
+}
+
+// Записать в NFC содержимое слайда idx (ЕДИНСТВЕННАЯ точка выбора «что писать»).
+// Звать только из loop (правило шины Wire1): setup и отложенная запись
+// по nfc_write_pending уже там.
+static void nfcWriteProfile(uint8_t idx) {
+  const Profile_t* p = &profiles[idx];
+  const char* content = p->nfc_url ? p->nfc_url : p->url;   // vCard-слайд: NFC ≠ QR
+  uint8_t prefix = p->nfc_prefix;
+  if (prefix == NFC_PREFIX_NONE) {
+    // Слайд «не переписывает» NFC. Оставить контент ПРЕДЫДУЩЕГО слайда нельзя:
+    // тап телефоном открыл бы чужую ссылку, не соответствующую экрану.
+    // Безопасный дефолт — tel: владельца: звонок уместен с любого слайда.
+    content = OWNER_PHONE;
+    prefix = URI_PREFIX_TEL;
+  }
+  NFC_WriteURL(content, prefix);
 }
 
 // ============================================================
@@ -804,9 +864,31 @@ static void _album_recenter_cb(lv_anim_t * a) {
   animating = false;
 }
 
-// Создание новой картинки альбома (как album_img_create в demo_music)
-// Родитель — экран модуля Links (не lv_scr_act: активным может быть другой модуль)
+// Шрифт символа на слайдах без картинки (48 если собран, иначе базовый 28)
+#if LV_FONT_MONTSERRAT_48
+  #define ALBUM_SYM_FONT &lv_font_montserrat_48
+#else
+  #define ALBUM_SYM_FONT &lv_font_montserrat_28
+#endif
+
+// Создание новой «картинки» альбома (как album_img_create в demo_music).
+// Родитель — экран модуля Links (не lv_scr_act: активным может быть другой модуль).
+// img == NULL -> вместо картинки круг 160×160 с крупным LV_SYMBOL по центру
+// (стиль как у центрального кольца Home: циан 0x35d0d6 на тёмном 0x0e2b2c —
+// это литералы HOME_ACCENT/фона Home, их #define объявлены ниже по файлу).
+// Для анимации слайда разницы нет: объект так же ездит по X (_obj_set_x_anim_cb)
+// и удаляется через lv_obj_del_anim_ready_cb — ей всё равно, img это или панель.
 static lv_obj_t* album_create(uint8_t idx) {
+  if (profiles[idx].img == NULL) {
+    lv_obj_t *disc = mkPanel(modules[MOD_LINKS].screen, 160, 160, 0x0e2b2c, LV_RADIUS_CIRCLE);
+    lv_obj_set_style_border_color(disc, lv_color_hex(0x35d0d6), 0);
+    lv_obj_set_style_border_width(disc, 2, 0);
+    lv_obj_clear_flag(disc, LV_OBJ_FLAG_CLICKABLE);   // клики — экрану (жесты карусели)
+    mkLabel(disc, profiles[idx].symbol ? profiles[idx].symbol : LV_SYMBOL_DUMMY,
+            ALBUM_SYM_FONT, 0x35d0d6, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_align(disc, LV_ALIGN_CENTER, 0, -20);
+    return disc;
+  }
   lv_obj_t *img = lv_img_create(modules[MOD_LINKS].screen);
   lv_img_set_src(img, profiles[idx].img);
   lv_img_set_antialias(img, false);
@@ -876,13 +958,22 @@ static void album_next(bool next) {
 // Кодирование происходит один раз ЗДЕСЬ (на splash), показ потом мгновенный.
 static void createQRs(lv_obj_t *frame) {
   for (uint8_t i = 0; i < NUM_PROFILES && i < QR_MAX; i++) {
-    char url[128];
-    snprintf(url, sizeof(url), "https://%s", profiles[i].url);
+    // Содержимое по виду слайда: https-ссылка / vCard как есть / tel:
+    // Буфер 320: vCard ~160 байт — самый длинный контент, запас двойной.
+    char content[320];
+    switch (profiles[i].qr_kind) {
+      case QR_RAW: snprintf(content, sizeof(content), "%s",        profiles[i].url); break;
+      case QR_TEL: snprintf(content, sizeof(content), "tel:%s",    profiles[i].url); break;
+      default:     snprintf(content, sizeof(content), "https://%s", profiles[i].url); break;
+    }
     qr_codes[i] = lv_qrcode_create(frame, 244, lv_color_black(), lv_color_white());
-    lv_qrcode_update(qr_codes[i], url, strlen(url));
+    // lv_qrcode_update вернёт LV_RES_INV, если контент не влезает в QR такого
+    // размера — для vCard ~160 байт это версия ~8 (49 модулей, ~5px/модуль),
+    // влезает с запасом. Если ошибка — оставляем пустой QR и ругаемся в лог.
+    lv_res_t res = lv_qrcode_update(qr_codes[i], content, strlen(content));
     lv_obj_center(qr_codes[i]);
     lv_obj_add_flag(qr_codes[i], LV_OBJ_FLAG_HIDDEN);
-    Serial.printf("QR[%d] ready: %s\n", i, url);
+    Serial.printf("QR[%d] %s: %.60s\n", i, res == LV_RES_OK ? "ready" : "TOO LONG", content);
   }
 }
 
@@ -2303,7 +2394,7 @@ void setup() {
   activeModule = MOD_HOME;
   lv_obj_del(splash);                       // заставку убираем
 
-  NFC_WriteURL(profiles[0].url, URI_PREFIX_HTTPS);
+  nfcWriteProfile(0);   // стартовый слайд (учитывает qr_kind/nfc_prefix слайда)
 
   // BLE/ANCS — приём уведомлений в фоне
   initBLE();
@@ -2371,7 +2462,7 @@ void loop() {
   // --- Отложенная запись NFC (после анимации, когда UI свободен) ---
   if (nfc_write_pending && !animating) {
     nfc_write_pending = false;
-    NFC_WriteURL(profiles[current].url, URI_PREFIX_HTTPS);
+    nfcWriteProfile(current);   // содержимое и префикс — по описанию слайда
   }
 
   // --- ANCS: подписка выполняется в ancsSubscribeTask (ядро 0) ---
