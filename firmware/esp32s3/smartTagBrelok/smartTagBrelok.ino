@@ -227,7 +227,21 @@ Profile_t profiles[] = {
   { "Маркет",      "market.yandex.ru",          NULL,         QR_HTTPS, URI_PREFIX_HTTPS, LV_SYMBOL_SHUFFLE, NULL },
 };
 const uint8_t NUM_PROFILES = sizeof(profiles) / sizeof(profiles[0]);
-uint8_t current = 0;
+
+// Именованные индексы профилей (для модулей-визиток и хуков onEnter)
+enum {
+  PROF_INSTA = 0, PROF_TELEGA, PROF_CONTACT, PROF_PAY, PROF_LOST,
+  PROF_OZON, PROF_MARKET
+};
+// Карусель Links листает ТОЛЬКО первые два профиля (Instagram/Telegram).
+// Остальные — отдельные модули на дуге Home (решение Романа), каждый со
+// своим экраном-QR; данные при этом живут в одной таблице profiles[].
+#define NUM_CAROUSEL 2
+
+uint8_t current = 0;   // активный слайд карусели (0..NUM_CAROUSEL-1)
+// Какой профиль писать в NFC при ближайшей отложенной записи: ставится
+// каруселью (свайп) или модулем-визиткой (вход), пишет ТОЛЬКО loop.
+uint8_t nfc_pending_idx = 0;
 
 lv_obj_t *album_img = NULL;     // текущая активная картинка (как в demo_music)
 lv_obj_t *name_label = NULL;
@@ -657,6 +671,11 @@ enum ModuleId {
   MOD_LINKS,           // карусель профилей (Instagram/Telegram + NFC + QR)
   MOD_NOTIFICATIONS,   // лента уведомлений
   MOD_CARDS,           // карты лояльности (EAN-13 на экране)
+  MOD_CONTACT,         // визитка: QR-vCard + NFC tel:
+  MOD_PAY,             // перевод по номеру (Сбер)
+  MOD_LOST,            // «Нашли меня?» — tel: владельца
+  MOD_OZON,            // заглушка маркетплейса
+  MOD_MARKET,          // заглушка маркетплейса
   // MOD_GPS,          // будущее: добавить сюда
   // MOD_FITNESS,      // будущее: шагомер
   MOD_COUNT
@@ -674,14 +693,31 @@ static void buildHome(lv_obj_t* scr);
 static void buildCarousel(lv_obj_t* scr);
 static void buildNotifications(lv_obj_t* scr);
 static void buildCards(lv_obj_t* scr);
+static void buildContact(lv_obj_t* scr);
+static void buildPay(lv_obj_t* scr);
+static void buildLost(lv_obj_t* scr);
+static void buildOzon(lv_obj_t* scr);
+static void buildMarket(lv_obj_t* scr);
 static void notifOnEnter();
 static void homeOnEnter();
+static void linksOnEnter();
+static void contactOnEnter();
+static void payOnEnter();
+static void lostOnEnter();
+static void ozonOnEnter();
+static void marketOnEnter();
 
 Module modules[MOD_COUNT] = {
   { "Home",          NULL, buildHome,          homeOnEnter },
-  { "Links",         NULL, buildCarousel,      NULL },
+  { "Links",         NULL, buildCarousel,      linksOnEnter },   // вернулись в Links -> NFC снова активного слайда
   { "Notifications", NULL, buildNotifications, notifOnEnter },
   { "Карты",         NULL, buildCards,         NULL },
+  // Модули-визитки: экран = большой QR, вход = перезапись NFC своим контентом
+  { "Контакт",       NULL, buildContact,       contactOnEnter },
+  { "Оплата",        NULL, buildPay,           payOnEnter },
+  { "Нашли меня?",   NULL, buildLost,          lostOnEnter },
+  { "Ozon",          NULL, buildOzon,          ozonOnEnter },
+  { "Маркет",        NULL, buildMarket,        marketOnEnter },
   // { "GPS",        NULL, buildGPS,           gpsOnEnter },      <- будущее
   // { "Fitness",    NULL, buildFitness,       fitnessOnEnter },  <- будущее
 };
@@ -899,7 +935,7 @@ static lv_obj_t* album_create(uint8_t idx) {
 void updateLabelDots(uint8_t idx) {
   lv_label_set_text(name_label, profiles[idx].name);
   lv_obj_align(name_label, LV_ALIGN_CENTER, 0, 120);
-  for (uint8_t i = 0; i < NUM_PROFILES; i++) {
+  for (uint8_t i = 0; i < NUM_CAROUSEL; i++) {
     if (i == idx) {
       lv_obj_set_style_bg_color(dots[i], lv_color_white(), 0);
       lv_obj_set_size(dots[i], 14, 14);
@@ -919,8 +955,8 @@ static void album_next(bool next) {
 
   // Новый индекс
   uint8_t idx = current;
-  if (next) { idx++; if (idx >= NUM_PROFILES) idx = 0; }
-  else      { if (idx == 0) idx = NUM_PROFILES - 1; else idx--; }
+  if (next) { idx++; if (idx >= NUM_CAROUSEL) idx = 0; }
+  else      { if (idx == 0) idx = NUM_CAROUSEL - 1; else idx--; }
   current = idx;
 
   updateLabelDots(idx);
@@ -944,6 +980,7 @@ static void album_next(bool next) {
             250, lv_anim_path_ease_in_out, _obj_set_x_anim_cb, _album_recenter_cb);
 
   // NFC переписываем ОТЛОЖЕННО (после анимации, чтобы не блокировать тач)
+  nfc_pending_idx = current;
   nfc_write_pending = true;
   // Разблокировка animating — в _album_recenter_cb по завершении анимации
 }
@@ -956,24 +993,35 @@ static void album_next(bool next) {
 // освобождается. Показ потом = просто подставить нужный буфер (мгновенно).
 // Предсоздание QR всех профилей (внутри рамки qr_obj), все скрыты.
 // Кодирование происходит один раз ЗДЕСЬ (на splash), показ потом мгновенный.
+// Содержимое QR профиля по qr_kind: https-ссылка / vCard как есть / tel:
+// Общее для карусели (createQRs) и модулей-визиток (mkQrScreen).
+// Буфер 320: vCard ~160 байт — самый длинный контент, запас двойной.
+static void qrContent(uint8_t idx, char* buf, size_t bufSize) {
+  switch (profiles[idx].qr_kind) {
+    case QR_RAW: snprintf(buf, bufSize, "%s",         profiles[idx].url); break;
+    case QR_TEL: snprintf(buf, bufSize, "tel:%s",     profiles[idx].url); break;
+    default:     snprintf(buf, bufSize, "https://%s", profiles[idx].url); break;
+  }
+}
+
+// Создать lv_qrcode профиля внутри родителя (общее карусели и модулей).
+// lv_qrcode_update вернёт LV_RES_INV, если контент не влезает в QR такого
+// размера — для vCard ~160 байт это версия ~8 (49 модулей, ~5px/модуль),
+// влезает с запасом. Если ошибка — останется пустой QR и ругань в логе.
+static lv_obj_t* mkQr(lv_obj_t* parent, uint8_t idx) {
+  char content[320];
+  qrContent(idx, content, sizeof(content));
+  lv_obj_t* qr = lv_qrcode_create(parent, 244, lv_color_black(), lv_color_white());
+  lv_res_t res = lv_qrcode_update(qr, content, strlen(content));
+  lv_obj_center(qr);
+  Serial.printf("QR[%d] %s: %.60s\n", idx, res == LV_RES_OK ? "ready" : "TOO LONG", content);
+  return qr;
+}
+
 static void createQRs(lv_obj_t *frame) {
-  for (uint8_t i = 0; i < NUM_PROFILES && i < QR_MAX; i++) {
-    // Содержимое по виду слайда: https-ссылка / vCard как есть / tel:
-    // Буфер 320: vCard ~160 байт — самый длинный контент, запас двойной.
-    char content[320];
-    switch (profiles[i].qr_kind) {
-      case QR_RAW: snprintf(content, sizeof(content), "%s",        profiles[i].url); break;
-      case QR_TEL: snprintf(content, sizeof(content), "tel:%s",    profiles[i].url); break;
-      default:     snprintf(content, sizeof(content), "https://%s", profiles[i].url); break;
-    }
-    qr_codes[i] = lv_qrcode_create(frame, 244, lv_color_black(), lv_color_white());
-    // lv_qrcode_update вернёт LV_RES_INV, если контент не влезает в QR такого
-    // размера — для vCard ~160 байт это версия ~8 (49 модулей, ~5px/модуль),
-    // влезает с запасом. Если ошибка — оставляем пустой QR и ругаемся в лог.
-    lv_res_t res = lv_qrcode_update(qr_codes[i], content, strlen(content));
-    lv_obj_center(qr_codes[i]);
+  for (uint8_t i = 0; i < NUM_CAROUSEL && i < QR_MAX; i++) {
+    qr_codes[i] = mkQr(frame, i);
     lv_obj_add_flag(qr_codes[i], LV_OBJ_FLAG_HIDDEN);
-    Serial.printf("QR[%d] %s: %.60s\n", i, res == LV_RES_OK ? "ready" : "TOO LONG", content);
   }
 }
 
@@ -982,11 +1030,11 @@ static void carouselElemsHidden(bool hidden) {
   if (hidden) {
     lv_obj_add_flag(album_img, LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(name_label, LV_OBJ_FLAG_HIDDEN);
-    for (uint8_t i = 0; i < NUM_PROFILES; i++) lv_obj_add_flag(dots[i], LV_OBJ_FLAG_HIDDEN);
+    for (uint8_t i = 0; i < NUM_CAROUSEL; i++) lv_obj_add_flag(dots[i], LV_OBJ_FLAG_HIDDEN);
   } else {
     lv_obj_clear_flag(album_img, LV_OBJ_FLAG_HIDDEN);
     lv_obj_clear_flag(name_label, LV_OBJ_FLAG_HIDDEN);
-    for (uint8_t i = 0; i < NUM_PROFILES; i++) lv_obj_clear_flag(dots[i], LV_OBJ_FLAG_HIDDEN);
+    for (uint8_t i = 0; i < NUM_CAROUSEL; i++) lv_obj_clear_flag(dots[i], LV_OBJ_FLAG_HIDDEN);
   }
 }
 
@@ -994,7 +1042,7 @@ static void show_qr() {
   if (qr_mode) return;
   carouselElemsHidden(true);
   // Показываем предсозданный QR текущего профиля (мгновенно, без кодирования)
-  for (uint8_t i = 0; i < NUM_PROFILES && i < QR_MAX; i++) {
+  for (uint8_t i = 0; i < NUM_CAROUSEL && i < QR_MAX; i++) {
     if (!qr_codes[i]) continue;
     if (i == current) lv_obj_clear_flag(qr_codes[i], LV_OBJ_FLAG_HIDDEN);
     else              lv_obj_add_flag(qr_codes[i], LV_OBJ_FLAG_HIDDEN);
@@ -1480,8 +1528,8 @@ static void buildCarousel(lv_obj_t *scr) {
 
   // Точки
   int dotSpacing = 26;
-  int startX = -(NUM_PROFILES - 1) * dotSpacing / 2;
-  for (uint8_t i = 0; i < NUM_PROFILES; i++) {
+  int startX = -(NUM_CAROUSEL - 1) * dotSpacing / 2;
+  for (uint8_t i = 0; i < NUM_CAROUSEL; i++) {
     lv_obj_t *d = mkPanel(scr, 10, 10, 0x555555, LV_RADIUS_CIRCLE);
     lv_obj_clear_flag(d, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_align(d, LV_ALIGN_BOTTOM_MID, startX + i * dotSpacing, -40);
@@ -1544,6 +1592,11 @@ static const char* moduleSymbol(uint8_t id) {
     case MOD_LINKS:         return LV_SYMBOL_UPLOAD;    // шаринг профилей
     case MOD_NOTIFICATIONS: return LV_SYMBOL_BELL;
     case MOD_CARDS:         return LV_SYMBOL_SD_CARD;   // похоже на карту
+    case MOD_CONTACT:       return LV_SYMBOL_CALL;      // визитка/контакт
+    case MOD_PAY:           return LV_SYMBOL_CHARGE;    // молния = быстрый платёж (СБП)
+    case MOD_LOST:          return LV_SYMBOL_GPS;       // «нашли меня»
+    case MOD_OZON:          return LV_SYMBOL_SHUFFLE;   // заглушка, заменим на иконку
+    case MOD_MARKET:        return LV_SYMBOL_SHUFFLE;   // заглушка, заменим на иконку
     default:                return LV_SYMBOL_SETTINGS;  // будущие модули
   }
 }
@@ -1707,8 +1760,13 @@ static void buildHome(lv_obj_t *scr) {
 
   // Мини-иконки всех модулей по нижней дуге.
   // Позиции считаются от числа модулей — новые встают сами.
+  // ШАГ АДАПТИВНЫЙ: 34° красиво до 5 слотов, но 8 слотов по 34° вылезли бы
+  // на верх экрана к статус-ряду (BT/батарея). Ужимаем так, чтобы вся дуга
+  // занимала не больше 210° (±105° от нижней точки): при 8 модулях шаг 30°,
+  // крайние слоты чуть выше горизонтали по бокам — статус-ряд не задет
+  // (слоты не поднимаются выше y=-45, иконки статуса на y=-182).
   const float R = 172.0f;        // радиус дуги от центра экрана
-  const float STEP = 34.0f;      // градусов между слотами
+  const float STEP = (HOME_ITEMS <= 5) ? 34.0f : 210.0f / (HOME_ITEMS - 1);
   for (uint8_t k = 0; k < HOME_ITEMS && k < HOME_SLOT_MAX; k++) {
     float a = (90.0f + (k - (HOME_ITEMS - 1) / 2.0f) * STEP) * 3.14159f / 180.0f;
     lv_coord_t xo = (lv_coord_t)(cosf(a) * R);
@@ -1971,6 +2029,57 @@ static void buildCards(lv_obj_t *scr) {
     if (cards[i].number[0]) { first = i; break; }
   cardsShow(first);
 }
+
+// ============================================================
+//  МОДУЛИ-ВИЗИТКИ: Контакт / Оплата / Нашли меня / Ozon / Маркет
+//  Каждый — отдельный экран на дуге Home (решение Романа): большой QR
+//  по центру, имя сверху, домик. QR кодируется ОДИН раз при старте
+//  (как в карусели). Вход в модуль перезаписывает NFC своим контентом —
+//  отложенно через nfc_write_pending, пишет ТОЛЬКО loop (правило Wire1).
+//  Данные берутся из той же таблицы profiles[] (индексы PROF_*).
+// ============================================================
+// Общий билдер экрана-визитки: чёрный фон, домик, имя, белая рамка с QR
+static void mkQrScreen(lv_obj_t* scr, uint8_t pidx) {
+  lv_obj_set_style_bg_color(scr, lv_color_black(), 0);
+  lv_obj_clear_flag(scr, LV_OBJ_FLAG_SCROLLABLE);
+  addHomeButton(scr);
+
+  // Имя модуля (под домиком, над QR)
+  mkLabel(scr, profiles[pidx].name, APP_FONT, 0xffffff, LV_ALIGN_TOP_MID, 0, 68);
+
+  // Белая рамка + QR (та же геометрия, что у QR-режима карусели: 244 внутри
+  // рамки с паддингом — размер проверен камерами на карусели)
+  lv_obj_t* frame = mkPanel(scr, 280, 280, 0xffffff, 24);
+  lv_obj_align(frame, LV_ALIGN_CENTER, 0, 24);
+  lv_obj_set_style_pad_all(frame, 8, 0);
+  lv_obj_clear_flag(frame, LV_OBJ_FLAG_CLICKABLE);
+  mkQr(frame, pidx);
+
+  // Подсказка снизу (стандартный шрифт темы, как у "Scan to open" карусели)
+  mkLabel(scr, "Scan to open", NULL, 0xAAAAAA, LV_ALIGN_BOTTOM_MID, 0, -28);
+}
+
+// Вход в модуль-визитку: NFC получает контент этого модуля. Отложенно —
+// реальная запись в loop, когда UI свободен (тот же путь, что у карусели).
+static void qrModuleEnter(uint8_t pidx) {
+  nfc_pending_idx = pidx;
+  nfc_write_pending = true;
+}
+
+// Тонкие обёртки: Module.build/onEnter не принимают параметров
+static void buildContact(lv_obj_t* scr) { mkQrScreen(scr, PROF_CONTACT); }
+static void buildPay(lv_obj_t* scr)     { mkQrScreen(scr, PROF_PAY); }
+static void buildLost(lv_obj_t* scr)    { mkQrScreen(scr, PROF_LOST); }
+static void buildOzon(lv_obj_t* scr)    { mkQrScreen(scr, PROF_OZON); }
+static void buildMarket(lv_obj_t* scr)  { mkQrScreen(scr, PROF_MARKET); }
+static void contactOnEnter() { qrModuleEnter(PROF_CONTACT); }
+static void payOnEnter()     { qrModuleEnter(PROF_PAY); }
+static void lostOnEnter()    { qrModuleEnter(PROF_LOST); }
+static void ozonOnEnter()    { qrModuleEnter(PROF_OZON); }
+static void marketOnEnter()  { qrModuleEnter(PROF_MARKET); }
+// Возврат в Links: NFC снова получает активный слайд карусели (иначе на
+// теге остался бы контент последнего открытого модуля-визитки)
+static void linksOnEnter()   { qrModuleEnter(current); }
 
 // ============================================================
 //  МОДУЛЬ Notifications: лента как на iPhone
@@ -2462,7 +2571,7 @@ void loop() {
   // --- Отложенная запись NFC (после анимации, когда UI свободен) ---
   if (nfc_write_pending && !animating) {
     nfc_write_pending = false;
-    nfcWriteProfile(current);   // содержимое и префикс — по описанию слайда
+    nfcWriteProfile(nfc_pending_idx);   // слайд карусели или модуль-визитка
   }
 
   // --- ANCS: подписка выполняется в ancsSubscribeTask (ядро 0) ---
